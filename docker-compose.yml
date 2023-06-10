@@ -36,11 +36,11 @@ services:
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
       AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     volumes:
-      - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
-      - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
-      - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
-      - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
-      - ${AIRFLOW_PROJ_DIR:-.}/.env:/opt/airflow/.env
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./plugins:/opt/airflow/plugins
+      - ./.env:/opt/airflow/.env
     user: "${AIRFLOW_UID:-50000}:0"
     depends_on:
       - redis
@@ -64,11 +64,11 @@ services:
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
       AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     volumes:
-      - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
-      - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
-      - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
-      - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
-      - ${AIRFLOW_PROJ_DIR:-.}/.env:/opt/airflow/.env
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./plugins:/opt/airflow/plugins
+      - ./.env:/opt/airflow/.env
     user: "${AIRFLOW_UID:-50000}:0"
     depends_on:
       - redis
@@ -91,11 +91,11 @@ services:
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
       AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     volumes:
-      - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
-      - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
-      - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
-      - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
-      - ${AIRFLOW_PROJ_DIR:-.}/.env:/opt/airflow/.env
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./plugins:/opt/airflow/plugins
+      - ./.env:/opt/airflow/.env
     user: "${AIRFLOW_UID:-50000}:0"
     depends_on:
       - redis
@@ -119,11 +119,11 @@ services:
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
       AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     volumes:
-      - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
-      - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
-      - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
-      - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
-      - ${AIRFLOW_PROJ_DIR:-.}/.env:/opt/airflow/.env
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./config:/opt/airflow/config
+      - ./plugins:/opt/airflow/plugins
+      - ./.env:/opt/airflow/.env
     user: "${AIRFLOW_UID:-50000}:0"
     depends_on:
       - redis
