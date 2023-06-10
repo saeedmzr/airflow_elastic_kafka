@@ -41,7 +41,6 @@ services:
       - ./config:/opt/airflow/config
       - ./plugins:/opt/airflow/plugins
       - ./.env:/opt/airflow/.env
-    user: "${AIRFLOW_UID:-50000}:0"
     depends_on:
       - redis
       - postgres
@@ -69,7 +68,6 @@ services:
       - ./config:/opt/airflow/config
       - ./plugins:/opt/airflow/plugins
       - ./.env:/opt/airflow/.env
-    user: "${AIRFLOW_UID:-50000}:0"
     depends_on:
       - redis
       - postgres
@@ -96,7 +94,6 @@ services:
       - ./config:/opt/airflow/config
       - ./plugins:/opt/airflow/plugins
       - ./.env:/opt/airflow/.env
-    user: "${AIRFLOW_UID:-50000}:0"
     depends_on:
       - redis
       - postgres
@@ -124,7 +121,6 @@ services:
       - ./config:/opt/airflow/config
       - ./plugins:/opt/airflow/plugins
       - ./.env:/opt/airflow/.env
-    user: "${AIRFLOW_UID:-50000}:0"
     depends_on:
       - redis
       - postgres
