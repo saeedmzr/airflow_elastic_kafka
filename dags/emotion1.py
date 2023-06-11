@@ -71,16 +71,12 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args) as dag
         return pool_array
 
 
-    @task()
+    @task(max_active_tis_per_dag=20)
     def publish_to_kafka(publish_data):
-        kafka_client = Kafka(BOOTSTRAP=setting.KAFKA_BOOTSTRAP, TOPIC=setting.KAFKA_TOPIC,
-                             USERNAME=setting.KAFKA_USERNAME, PASSWORD=setting.KAFKA_PASSWORD)
-        pool = ThreadPoolExecutor(max_workers=10)
-        pool.map(kafka_client.insert_data, publish_data)
-        pool.shutdown()
-
+        kafka_client = Kafka(BOOTSTRAP=setting.KAFKA_BOOTSTRAP, TOPIC=setting.KAFKA_TOPIC)
+        kafka_client.insert_data(publish_data)
 
     data = reterieve_data_from_elastic()
     transfered_data = transfer_data(data)
     expanded_tasks = trasnfer_batch.expand(batch=transfered_data)
-    published_kafka = publish_to_kafka(expanded_tasks)
+    published_kafka = publish_to_kafka.expand(publish_data=expanded_tasks)
