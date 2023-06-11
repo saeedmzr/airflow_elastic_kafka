@@ -4,11 +4,7 @@ import json
 class Kafka:
     def __init__(self, BOOTSTRAP, TOPIC,USERNAME,PASSWORD):
         self.producer = Producer({
-            'bootstrap.servers': BOOTSTRAP,
-            'security.protocol': 'SASL_PLAINTEXT',
-            'sasl.mechanism': 'PLAIN',
-            'sasl.username': USERNAME,
-            'sasl.password': PASSWORD
+            'bootstrap.servers': BOOTSTRAP
         })
         self.kafka_topic = TOPIC
 
