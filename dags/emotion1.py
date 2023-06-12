@@ -22,7 +22,7 @@ default_args = {
 }
 now = pendulum.now()
 
-with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args) as dag:
+with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedule_interval='*/5 * * * *') as dag:
     @task()
     def reterieve_data_from_elastic():
         elastic_client = ElasticSearch(es_host=setting.ES_HOST, es_port=setting.ES_PORT,
