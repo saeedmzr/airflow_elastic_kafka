@@ -2,9 +2,13 @@ from confluent_kafka import Producer
 import json
 
 class Kafka:
-    def __init__(self, BOOTSTRAP, TOPIC):
+    def __init__(self, BOOTSTRAP, TOPIC, USERNAME, PASSWORD):
         self.producer = Producer({
-            'bootstrap.servers': BOOTSTRAP
+            'bootstrap.servers': BOOTSTRAP,
+            'security.protocol': 'SASL_PLAINTEXT',
+            'sasl.mechanism': 'PLAIN',
+            'sasl.username': USERNAME,
+            'sasl.password': PASSWORD
         })
         self.kafka_topic = TOPIC
 
