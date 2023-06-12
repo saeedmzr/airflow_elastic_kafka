@@ -1,8 +1,10 @@
+import datetime
 from datetime import timedelta
 
 import pendulum
 from airflow import DAG
 from airflow.decorators import task
+from airflow.models import Variable
 
 import setting
 from components.elastic import ElasticSearch
@@ -12,11 +14,10 @@ from tasks.emotions import Emotions
 default_args = {
     "owner": "saeed mouzarmi",
     "depends_on_past": False,
-    'start_date': pendulum.today('UTC').add(days=-3),
+    'start_date': pendulum.now(),
     "retries": 1,
     "retry_delay": timedelta(minutes=1),
 }
-now = pendulum.now()
 
 with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedule_interval='*/5 * * * *') as dag:
     @task()
@@ -24,6 +25,26 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
         elastic_client = ElasticSearch(es_host=setting.ES_HOST, es_port=setting.ES_PORT,
                                        es_username=setting.ES_USERNAME,
                                        es_password=setting.ES_PASSWORD, es_index=setting.ES_INDEX)
+        try:
+            latest_id = Variable.get("latest_id")
+        except KeyError:
+            latest_id = None
+
+        if latest_id != None:
+            elastic_data = elastic_client.receive_data(query={
+                "query": {
+                    "match": {
+                        "id": latest_id
+                    }
+                },
+                "_source": ["id", "@timestamp"]
+            })
+            timedate = elastic_data[0]["_source"]["@timestamp"]
+        else:
+            now = datetime.datetime.utcnow()
+
+            timedate = now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
         elastic_data = elastic_client.receive_data(query={
             "size": setting.ELASTIC_READ_SIZE,
             "sort": {
@@ -37,11 +58,21 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
                                 "field": "lf_emotion"
                             }
                         }
-                    ]
+                    ],
+                    "filter": {
+                        "range": {
+                            "@timestamp": {
+                                "lt": timedate
+                            }
+                        }
+                    }
                 }
             },
             "_source": ["id", "published_at", "full_text"]
         })
+
+        Variable.set("latest_id", elastic_data[-1]["_source"]["id"])
+
         return elastic_data
 
 
