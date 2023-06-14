@@ -8,8 +8,8 @@ class Kafka:
             'bootstrap.servers': BOOTSTRAP,
             'security.protocol': 'SASL_PLAINTEXT',
             'sasl.mechanism': 'PLAIN',
-            'sasl.username': USERNAME,
-            'sasl.password': PASSWORD
+            'sasl.username': 'logstash',
+            'sasl.password': '1238df2798f503cb55fc57c48bce7c5a'
         })
         self.kafka_topic = TOPIC
 
