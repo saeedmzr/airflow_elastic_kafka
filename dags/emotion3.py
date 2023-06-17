@@ -43,7 +43,7 @@ with DAG(dag_id="add_emotion_tag_july_2022", default_args=default_args, schedule
                     ],
                     "filter": {
                             "range": {
-                              "@timestamp": {
+                              "published_at": {
                                 "gte": "2022-05-01T00:00:00",
                                 "lt": "2022-06-22T00:00:00"
                                 }
