@@ -78,7 +78,8 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
 
     @task(max_active_tis_per_dag=20)
     def trasnfer_batch(batch):
-        kafka_client = Kafka(BOOTSTRAP=setting.KAFKA_BOOTSTRAP, TOPIC=setting.KAFKA_TOPIC,USERNAME=setting.KAFKA_USERNAME, PASSWORD=setting.KAFKA_PASSWORD)
+        kafka_client = Kafka(BOOTSTRAP=setting.KAFKA_BOOTSTRAP, TOPIC=setting.KAFKA_TOPIC,
+                             USERNAME=setting.KAFKA_USERNAME, PASSWORD=setting.KAFKA_PASSWORD)
         emotion_client = Emotions(setting.EMOTION_URL, setting.EMOTION_TOKEN)
         emotions = emotion_client.get_emotions([x.pop("full_text") for x in batch])
         for idx, doc in enumerate(batch):
@@ -101,7 +102,9 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
         return pool_array
 
 
-
     data = reterieve_data_from_elastic()
     transfered_data = transfer_data(data)
     expanded_tasks = trasnfer_batch.expand(batch=transfered_data)
+
+
+    data >> transfered_data >> expanded_tasks
