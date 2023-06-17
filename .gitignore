@@ -1,2 +1,5 @@
 .env
 /logs
+dags/__pycache__
+dags/tasks/__pycache__
+dags/components/__pycache__
