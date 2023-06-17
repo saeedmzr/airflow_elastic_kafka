@@ -11,15 +11,16 @@ from components.elastic import ElasticSearch
 from components.kafka import Kafka
 from tasks.emotions import Emotions
 
+
 default_args = {
     "owner": "saeed mouzarmi",
     "depends_on_past": False,
-    'start_date': pendulum.now(),
+    'start_date': pendulum.today('UTC').add(days=-3),
     "retries": 1,
     "retry_delay": timedelta(minutes=1),
 }
 
-with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedule_interval='*/5 * * * *') as dag:
+with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedule_interval='*/1 * * * *') as dag:
     @task()
     def reterieve_data_from_elastic():
         elastic_client = ElasticSearch(es_host=setting.ES_HOST, es_port=setting.ES_PORT,
@@ -105,6 +106,5 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
     data = reterieve_data_from_elastic()
     transfered_data = transfer_data(data)
     expanded_tasks = trasnfer_batch.expand(batch=transfered_data)
-
 
     data >> transfered_data >> expanded_tasks
