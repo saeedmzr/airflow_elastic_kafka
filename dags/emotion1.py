@@ -101,14 +101,7 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
         return pool_array
 
 
-    @task()
-    def publish_to_kafka(publish_data):
-        kafka_client = Kafka(BOOTSTRAP=setting.KAFKA_BOOTSTRAP, TOPIC=setting.KAFKA_TOPIC,
-                             USERNAME=setting.KAFKA_USERNAME, PASSWORD=setting.KAFKA_PASSWORD)
-        kafka_client.insert_data(publish_data)
-
 
     data = reterieve_data_from_elastic()
     transfered_data = transfer_data(data)
     expanded_tasks = trasnfer_batch.expand(batch=transfered_data)
-    # published_kafka = publish_to_kafka(expanded_tasks)
