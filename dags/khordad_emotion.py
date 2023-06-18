@@ -38,7 +38,7 @@ def transfer():
         elastic_data = elastic_client.receive_data(query={
             "size": setting.ELASTIC_READ_SIZE,
             "sort": {
-                "published_at": 'desc'
+                "published_at": 'asc'
             },
             "query": {
                 "bool": {
