@@ -7,5 +7,5 @@ class ElasticSearch:
         self.es_index = es_index
 
     def receive_data(self, query):
-        res = self.es.search(index=self.es_index, body=query)
+        res = self.es.search(index=self.es_index, body=query, request_timeout=6000)
         return res['hits']['hits']
