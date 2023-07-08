@@ -25,9 +25,9 @@ def processor():
 
     def trasnfer_batch(batch):
         emotion_client = Emotions(setting.EMOTION_URL,setting.EMOTION_TOKEN)
-        emotions = emotion_client.get_emotions([x.pop("full_text") for x in batch])
+        emotions = emotion_client.get_emotions([x.pop(setting.FULL_TEXT_FIELD) for x in batch])
         for idx, doc in enumerate(batch):
-            batch[idx]["lf_emotion"] = emotions[idx]
+            batch[idx][setting.NOT_EXISTS_FIELD] = emotions[idx]
         return batch
 
     @task()
@@ -37,26 +37,26 @@ def processor():
         elastic_data = elastic_client.receive_data(query={
             "size": setting.ELASTIC_READ_SIZE,
             "sort": {
-                "published_at": 'desc'
+                setting.ORDERABLE_PARAMETERS: 'desc'
             },
             "query": {
                 "bool": {
                     "must_not": [
                         {
                             "exists": {
-                                "field": "lf_emotion"
+                                "field": setting.ORDERABLE_PARAMETERS
                             }
                         }
                     ]
                 }
             },
-            "_source": ["id", "published_at", "full_text"]
+            "_source": ["id", setting.ORDERABLE_PARAMETERS, setting.FULL_TEXT_FIELD]
         })
         return elastic_data
 
     @task
     def transfer_data(raw_data):
-        pool = ThreadPoolExecutor(max_workers=500)
+        pool = ThreadPoolExecutor(max_workers=10)
 
         pool_array = []
         tran_data = [item["_source"] for item in raw_data]
@@ -68,7 +68,7 @@ def processor():
 
         expanded_tasks = pool.map(trasnfer_batch, pool_array)
         pool.shutdown()
-        response_list = []  # List to store response dictionaries
+        response_list = []
 
         for response in expanded_tasks:
             for item in response:

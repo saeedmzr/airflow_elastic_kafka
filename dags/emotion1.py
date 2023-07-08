@@ -11,7 +11,6 @@ from components.elastic import ElasticSearch
 from components.kafka import Kafka
 from tasks.emotions import Emotions
 
-
 default_args = {
     "owner": "saeed mouzarmi",
     "depends_on_past": False,
@@ -31,16 +30,16 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
         except KeyError:
             latest_id = None
 
-        if latest_id != None:
+        if latest_id is not None:
             elastic_data = elastic_client.receive_data(query={
                 "query": {
                     "match": {
                         "id": latest_id
                     }
                 },
-                "_source": ["id", "@timestamp"]
+                "_source": ["id", setting.ORDERABLE_PARAMETERS]
             })
-            timedate = elastic_data[0]["_source"]["@timestamp"]
+            timedate = elastic_data[0]["_source"][setting.ORDERABLE_PARAMETERS]
         else:
             now = datetime.datetime.utcnow()
 
@@ -49,27 +48,27 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
         elastic_data = elastic_client.receive_data(query={
             "size": setting.ELASTIC_READ_SIZE,
             "sort": {
-                "published_at": 'desc'
+                setting.ORDERABLE_PARAMETERS: 'desc'
             },
             "query": {
                 "bool": {
                     "must_not": [
                         {
                             "exists": {
-                                "field": "lf_emotion"
+                                "field": setting.NOT_EXISTS_FIELD
                             }
                         }
                     ],
                     "filter": {
                         "range": {
-                            "@timestamp": {
+                            setting.ORDERABLE_PARAMETERS: {
                                 "lt": timedate
                             }
                         }
                     }
                 }
             },
-            "_source": ["id", "published_at", "full_text"]
+            "_source": ["id", setting.ORDERABLE_PARAMETERS, setting.FULL_TEXT_FIELD]
         })
 
         Variable.set("latest_id", elastic_data[-1]["_source"]["id"])
@@ -82,9 +81,9 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
         kafka_client = Kafka(BOOTSTRAP=setting.KAFKA_BOOTSTRAP, TOPIC=setting.KAFKA_TOPIC,
                              USERNAME=setting.KAFKA_USERNAME, PASSWORD=setting.KAFKA_PASSWORD)
         emotion_client = Emotions(setting.EMOTION_URL, setting.EMOTION_TOKEN)
-        emotions = emotion_client.get_emotions([x.pop("full_text") for x in batch])
+        emotions = emotion_client.get_emotions([x.pop(setting.FULL_TEXT_FIELD) for x in batch])
         for idx, doc in enumerate(batch):
-            batch[idx]["lf_emotion"] = emotions[idx]
+            batch[idx][setting.NOT_EXISTS_FIELD] = emotions[idx]
         kafka_client.insert_data(batch)
 
         return batch
