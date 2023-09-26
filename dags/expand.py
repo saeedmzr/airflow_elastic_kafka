@@ -18,7 +18,7 @@ from components.kafka import Kafka
 from tasks.emotions import Emotions
 
 default_args = {
-    "owner": "Instagram",
+    "owner": "Amirreza Akbari",
     "depends_on_past": False,
     'start_date': pendulum.today('UTC').add(days=-3),
     "retries": 1,
