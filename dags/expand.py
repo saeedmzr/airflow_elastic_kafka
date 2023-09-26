@@ -15,7 +15,6 @@ from requests.exceptions import ChunkedEncodingError
 import setting
 from components.elastic import ElasticSearch
 from components.kafka import Kafka
-from tasks.emotion_v1 import EmotionV1
 from tasks.emotions import Emotions
 
 default_args = {
@@ -27,31 +26,17 @@ default_args = {
 }
 
 with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedule_interval='*/1 * * * *',
-         catchup=False) as dag:
+         catchup=False, max_active_tasks=20, max_active_runs=1) as dag:
     @task()
     def reterieve_data_from_elastic():
         elastic_client = ElasticSearch(es_host=setting.ES_HOST, es_port=setting.ES_PORT,
                                        es_username=setting.ES_USERNAME,
                                        es_password=setting.ES_PASSWORD, es_index=setting.ES_INDEX)
+        last_timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         try:
-            latest_id = Variable.get("latest_id")
+            last_timestamp = Variable.get("last_timestamp")
         except KeyError:
-            latest_id = None
-
-        if latest_id is not None:
-            elastic_data = elastic_client.receive_data(query={
-                "query": {
-                    "match": {
-                        "id": latest_id
-                    }
-                },
-                "_source": ["id", setting.ORDERABLE_PARAMETERS]
-            })
-            timedate = elastic_data[0]["_source"][setting.ORDERABLE_PARAMETERS]
-        else:
-            now = datetime.datetime.utcnow()
-
-            timedate = now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+            pass
 
         elastic_data = elastic_client.receive_data(query={
             "size": setting.ELASTIC_READ_SIZE,
@@ -70,51 +55,41 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
                     "filter": {
                         "range": {
                             setting.ORDERABLE_PARAMETERS: {
-                                "lt": timedate
+                                "lt": last_timestamp
                             }
                         }
                     }
                 }
-            },
-            "_source": ["pk", setting.ORDERABLE_PARAMETERS, setting.FULL_TEXT_FIELD]
+            }
         })
-
-        Variable.set("latest_id", elastic_data[-1]["_source"]["pk"])
+        Variable.set("last_timestamp", elastic_data[0]["_source"][setting.ORDERABLE_PARAMETERS])
 
         return elastic_data
 
 
-    @task(max_active_tis_per_dag=20)
-    def perform_emotion_v1(batch):
-        ai_module_client = EmotionV1('instagram')
-        emotions = ai_module_client.get_emotion_v1([x.pop(setting.FULL_TEXT_FIELD) for x in batch])
-        for idx, doc in enumerate(batch):
-            batch[idx][setting.NOT_EXISTS_FIELD] = emotions[idx]
-        print(batch)
-        # kafka_client.insert_data(batch)
-        return batch
-
-
-    @task(max_active_tis_per_dag=20)
+    @task(max_active_tis_per_dag=3)
     def perform_ner(batch):
-        urls = [
-            'http://192.168.10.188:8080/predictions/ner',
-            'http://192.168.10.196:8080/predictions/ner',
-            'http://192.168.10.199:8080/predictions/ner'
-        ]
-        url = urls[random.randint(0, 2)]
-        payload = json.dumps(batch)
+        texts_list = []
+        for batch_item in batch:
+            if batch_item.get('caption'):
+                texts_list.append(batch_item['caption'].get('text'))
+            else:
+                texts_list.append(None)
+        url = 'http://192.168.10.62/predictions/ner'
+        payload = json.dumps(texts_list)
         headers = {
             'Authorization': setting.EMOTION_TOKEN,
             'Content-Type': 'application/json'
         }
         while True:
             try:
-                response = requests.request("POST", url, headers=headers, data=payload)
+                response = requests.request("POST", url, headers=headers, data=payload, timeout=60*3)
             except (Timeout, ConnectionError, ChunkedEncodingError) as e:
+                print(e)
                 time.sleep(10)
                 continue
             if response.status_code != 200:
+                print('error not 200', response.status_code)
                 time.sleep(10)
                 continue
             return json.loads(response.text)
@@ -122,7 +97,7 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
 
     @task()
     def print_output(batch):
-        print(batch)
+        print(len(batch))
         return batch
 
 
