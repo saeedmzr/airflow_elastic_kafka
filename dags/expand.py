@@ -117,6 +117,6 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
     data = reterieve_data_from_elastic()
     prepared_data = prepare_data(data)
     ner_tagged_data = perform_ner.expand(batch=prepared_data)
-    final_data = print_output.expand(batch=ner_tagged_data)
+    final_data = print_output(ner_tagged_data)
 
-    data >> prepared_data >> ner_tagged_data
+    data >> prepared_data >> ner_tagged_data >> final_data
