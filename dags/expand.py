@@ -32,9 +32,11 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
         elastic_client = ElasticSearch(es_host=setting.ES_HOST, es_port=setting.ES_PORT,
                                        es_username=setting.ES_USERNAME,
                                        es_password=setting.ES_PASSWORD, es_index=setting.ES_INDEX)
-        exclude_ids = Variable.get("exclude_ids")
-        if not exclude_ids:
+        try:
+            exclude_ids = Variable.get("exclude_ids")
+        except KeyError:
             exclude_ids = []
+        print(exclude_ids)
         elastic_data = elastic_client.receive_data(query={
             "size": setting.ELASTIC_READ_SIZE,
             "sort": {
@@ -144,7 +146,7 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
         flattened_ner_result = [item for sub_list in ner_result for item in sub_list]
         flattened_sentiment_result = [item for sub_list in sentimant_result for item in sub_list]
         final_data = []
-        for idx, item in enum(raw_data):
+        for idx, item in enumerate(raw_data):
             tmp_data = {
                 **item,
                 'lf_sentiment': flattened_sentiment_result[idx],
@@ -166,7 +168,7 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
             }
             final_data.append(tmp_data)
         print(len(final_data))
-        print(final_data)
+        print(final_data[0])
         return final_data
 
 
