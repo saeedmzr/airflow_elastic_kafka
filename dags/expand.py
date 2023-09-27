@@ -32,12 +32,9 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
         elastic_client = ElasticSearch(es_host=setting.ES_HOST, es_port=setting.ES_PORT,
                                        es_username=setting.ES_USERNAME,
                                        es_password=setting.ES_PASSWORD, es_index=setting.ES_INDEX)
-        last_timestamp = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-        try:
-            last_timestamp = Variable.get("last_timestamp")
-        except KeyError:
-            pass
-
+        exclude_ids = Variable.get("exclude_ids")
+        if not exclude_ids:
+            exclude_ids = []
         elastic_data = elastic_client.receive_data(query={
             "size": setting.ELASTIC_READ_SIZE,
             "sort": {
@@ -48,21 +45,39 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
                     "must_not": [
                         {
                             "exists": {
-                                "field": setting.NOT_EXISTS_FIELD
+                                "field": "ner"
+                            }
+                        },
+                        {
+                            "exists": {
+                                "field": "lf_subject"
+                            }
+                        },
+                        {
+                            "exists": {
+                                "field": "subject"
+                            }
+                        },
+                        {
+                            "exists": {
+                                "field": "lf_emotion"
+                            }
+                        },
+                        {
+                            "exists": {
+                                "field": "lf_sentiment"
+                            }
+                        },
+                        {
+                            "terms": {
+                                "_id": exclude_ids
                             }
                         }
                     ],
-                    "filter": {
-                        "range": {
-                            setting.ORDERABLE_PARAMETERS: {
-                                "lt": last_timestamp
-                            }
-                        }
-                    }
                 }
             }
         })
-        Variable.set("last_timestamp", elastic_data[0]["_source"][setting.ORDERABLE_PARAMETERS])
+        Variable.set("exclude_ids", [item['_id'] for item in elastic_data])
 
         return elastic_data
 
@@ -83,7 +98,35 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
         }
         while True:
             try:
-                response = requests.request("POST", url, headers=headers, data=payload, timeout=60*3)
+                response = requests.request("POST", url, headers=headers, data=payload, timeout=60 * 3)
+            except (Timeout, ConnectionError, ChunkedEncodingError) as e:
+                print(e)
+                time.sleep(10)
+                continue
+            if response.status_code != 200:
+                print('error not 200', response.status_code)
+                time.sleep(10)
+                continue
+            return json.loads(response.text)
+
+
+    @task(max_active_tis_per_dag=3)
+    def perform_sentiment(batch):
+        texts_list = []
+        for batch_item in batch:
+            if batch_item.get('caption'):
+                texts_list.append(batch_item['caption'].get('text'))
+            else:
+                texts_list.append(None)
+        url = 'http://192.168.10.62/predictions/sentiment'
+        payload = json.dumps(texts_list)
+        headers = {
+            'Authorization': setting.EMOTION_TOKEN,
+            'Content-Type': 'application/json'
+        }
+        while True:
+            try:
+                response = requests.request("POST", url, headers=headers, data=payload, timeout=60 * 3)
             except (Timeout, ConnectionError, ChunkedEncodingError) as e:
                 print(e)
                 time.sleep(10)
@@ -96,9 +139,35 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
 
 
     @task()
-    def print_output(batch):
-        print(len(batch))
-        return batch
+    def print_output(raw_data, ner_result, sentimant_result):
+        print(f'ner_len:{len(ner_result)}', f'sentiment_len{len(sentimant_result)}')
+        flattened_ner_result = [item for sub_list in ner_result for item in sub_list]
+        flattened_sentiment_result = [item for sub_list in sentimant_result for item in sub_list]
+        final_data = []
+        for idx, item in enum(raw_data):
+            tmp_data = {
+                **item,
+                'lf_sentiment': flattened_sentiment_result[idx],
+                'ner': flattened_ner_result[idx],
+                "lf_modules": {
+                    "sentiment": {
+                        "version": "1.0.0"
+                    },
+                    "emotion": {
+                        "version": "2.0.0"
+                    },
+                    "ner": {
+                        "version": "1.0.0"
+                    },
+                    "subject": {
+                        "version": "1.0.0"
+                    }
+                }
+            }
+            final_data.append(tmp_data)
+        print(len(final_data))
+        print(final_data)
+        return final_data
 
 
     @task()
@@ -114,9 +183,10 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
         return pool_array
 
 
-    data = reterieve_data_from_elastic()
-    prepared_data = prepare_data(data)
+    raw_data = reterieve_data_from_elastic()
+    prepared_data = prepare_data(raw_data)
     ner_tagged_data = perform_ner.expand(batch=prepared_data)
-    final_data = print_output(ner_tagged_data)
+    sentiment_tagged_data = perform_sentiment.expand(batch=prepared_data)
+    final_data = print_output(raw_data=raw_data, ner_result=ner_tagged_data, sentimant_result=sentiment_tagged_data)
 
-    data >> prepared_data >> ner_tagged_data >> final_data
+    raw_data >> prepared_data >> [ner_tagged_data, sentiment_tagged_data] >> final_data
