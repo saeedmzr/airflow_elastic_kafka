@@ -12,10 +12,12 @@ from airflow.models import Variable
 from requests import Timeout
 from requests.exceptions import ChunkedEncodingError
 
-import setting
+from tasks import emotions
 from components.elastic import ElasticSearch
 from components.kafka import Kafka
 from tasks.emotions import Emotions
+
+import setting
 
 default_args = {
     "owner": "Amirreza Akbari",
@@ -156,7 +158,7 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
                         "version": "1.0.0"
                     },
                     "emotion": {
-                        "version": "2.0.0"
+                        "version": "1.0.0"
                     },
                     "ner": {
                         "version": "1.0.0"
