@@ -158,13 +158,15 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
 
 
     @task()
-    def print_output(raw_data, ner_result, sentimant_result):
+    def print_output(raw_data, ner_result, sentimant_result, emotion_v1_result):
         flattened_ner_result = [item for sub_list in ner_result for item in sub_list]
         flattened_sentiment_result = [item for sub_list in sentimant_result for item in sub_list]
+        flattened_emotion_v1_result = [item for sub_list in emotion_v1_result for item in sub_list]
         final_data = []
         for idx, item in enumerate(raw_data):
             tmp_data = {
                 **item,
+                **flattened_emotion_v1_result,
                 'lf_sentiment': flattened_sentiment_result[idx],
                 'ner': flattened_ner_result[idx],
                 "lf_modules": {
@@ -203,9 +205,9 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
 
     raw_data = reterieve_data_from_elastic()
     prepared_data = prepare_data(raw_data)
-    # ner_tagged_data = perform_ner.expand(batch=prepared_data)
+    ner_tagged_data = perform_ner.expand(batch=prepared_data)
     emotion_v1_tagged_data = perform_emotion_v1.expand(texts=prepared_data)
-    # sentiment_tagged_data = perform_sentiment.expand(batch=prepared_data)
-    # final_data = print_output(raw_data=raw_data, ner_result=ner_tagged_data, sentimant_result=sentiment_tagged_data)
+    sentiment_tagged_data = perform_sentiment.expand(batch=prepared_data)
+    final_data = print_output(raw_data=raw_data, ner_result=ner_tagged_data, sentimant_result=sentiment_tagged_data)
 
-    raw_data >> prepared_data >> [emotion_v1_tagged_data]
+    raw_data >> prepared_data >> [ner_tagged_data,emotion_v1_tagged_data ,sentiment_tagged_data] >> final_data
