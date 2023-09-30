@@ -7,16 +7,14 @@ RUN apt-get update \
         build-essential tzdata krb5-config libkrb5-dev \
     && apt-get autoremove -yqq --purge \
     && apt-get clean \
+    && apt-get install -y git \
     && rm -rf /var/lib/apt/lists/*
+
+COPY --chown=airflow requirements.txt /opt/airflow/requirements.txt
 
 USER airflow
 
-RUN pip install --no-cache-dir \
-    pendulum \
-    requests \
-    python-dotenv \
-    elasticsearch \
-    confluent_kafka
+RUN pip install --no-cache-dir -r requirements.txt
 
 
 COPY --chown=airflow .env /opt/airflow/.env

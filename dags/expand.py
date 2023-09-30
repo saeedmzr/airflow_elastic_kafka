@@ -11,11 +11,10 @@ from airflow.decorators import task
 from airflow.models import Variable
 from requests import Timeout
 from requests.exceptions import ChunkedEncodingError
-
-from tasks import emotions
+import pandas as pd
+from emotion import Emotion
 from components.elastic import ElasticSearch
 from components.kafka import Kafka
-from tasks.emotions import Emotions
 
 import setting
 
@@ -34,11 +33,8 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
         elastic_client = ElasticSearch(es_host=setting.ES_HOST, es_port=setting.ES_PORT,
                                        es_username=setting.ES_USERNAME,
                                        es_password=setting.ES_PASSWORD, es_index=setting.ES_INDEX)
-        try:
-            exclude_ids = Variable.get("exclude_ids")
-        except KeyError:
-            exclude_ids = []
-        print(exclude_ids)
+        exclude_ids = Variable.get("exclude_ids", default_var=[], deserialize_json=True)
+        print(type(exclude_ids))
         elastic_data = elastic_client.receive_data(query={
             "size": setting.ELASTIC_READ_SIZE,
             "sort": {
@@ -47,6 +43,11 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
             "query": {
                 "bool": {
                     "must_not": [
+                        {
+                            "terms": {
+                                "_id": exclude_ids
+                            }
+                        },
                         {
                             "exists": {
                                 "field": "ner"
@@ -71,17 +72,12 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
                             "exists": {
                                 "field": "lf_sentiment"
                             }
-                        },
-                        {
-                            "terms": {
-                                "_id": exclude_ids
-                            }
                         }
                     ],
                 }
             }
         })
-        Variable.set("exclude_ids", [item['_id'] for item in elastic_data])
+        Variable.set("exclude_ids", json.dumps([item['_id'] for item in elastic_data]))
 
         return elastic_data
 
@@ -115,6 +111,25 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
 
 
     @task(max_active_tis_per_dag=3)
+    def perform_emotion_v1(texts):
+        emotion = Emotion('instagram')
+        df = pd.DataFrame({'id': list(range(1, len(texts) + 1)), 'text': texts})
+        df = emotion.infer(df)
+        df.columns = ['id', 'text', 'lf_wonder', 'lf_credence', 'lf_sadness', 'lf_happiness', 'lf_expectation',
+                      'lf_anger', 'lf_hate',
+                      'lf_hope', 'lf_fear']
+
+        selected_columns = ['lf_wonder', 'lf_credence', 'lf_sadness', 'lf_happiness', 'lf_expectation',
+                            'lf_anger', 'lf_hate', 'lf_hope', 'lf_fear']
+        result = []
+        for index, row in df.iterrows():
+            selected_data = {col: row[col] for col in selected_columns}
+            result.append(selected_data)
+        print(result[0])
+        return result
+
+
+    @task(max_active_tis_per_dag=3)
     def perform_sentiment(batch):
         texts_list = []
         for batch_item in batch:
@@ -144,7 +159,6 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
 
     @task()
     def print_output(raw_data, ner_result, sentimant_result):
-        print(f'ner_len:{len(ner_result)}', f'sentiment_len{len(sentimant_result)}')
         flattened_ner_result = [item for sub_list in ner_result for item in sub_list]
         flattened_sentiment_result = [item for sub_list in sentimant_result for item in sub_list]
         final_data = []
@@ -189,8 +203,9 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
 
     raw_data = reterieve_data_from_elastic()
     prepared_data = prepare_data(raw_data)
-    ner_tagged_data = perform_ner.expand(batch=prepared_data)
-    sentiment_tagged_data = perform_sentiment.expand(batch=prepared_data)
-    final_data = print_output(raw_data=raw_data, ner_result=ner_tagged_data, sentimant_result=sentiment_tagged_data)
+    # ner_tagged_data = perform_ner.expand(batch=prepared_data)
+    emotion_v1_tagged_data = perform_emotion_v1.expand(texts=prepared_data)
+    # sentiment_tagged_data = perform_sentiment.expand(batch=prepared_data)
+    # final_data = print_output(raw_data=raw_data, ner_result=ner_tagged_data, sentimant_result=sentiment_tagged_data)
 
-    raw_data >> prepared_data >> [ner_tagged_data, sentiment_tagged_data] >> final_data
+    raw_data >> prepared_data >> [emotion_v1_tagged_data]

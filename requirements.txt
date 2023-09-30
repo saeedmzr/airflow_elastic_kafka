@@ -1,0 +1,8 @@
+pendulum
+requests
+python-dotenv
+elasticsearch
+confluent_kafka
+git+https://p.askarzadeh:Life1402@git.lfdesk.ir/ai/inference/summarization.git@v1#egg=summarization
+git+https://p.askarzadeh:Life1402@git.lfdesk.ir/ai/inference/emotion.git@v1#egg=emotion
+git+https://p.askarzadeh:Life1402@git.lfdesk.ir/ai/inference/topic.git@v1#egg=topic
