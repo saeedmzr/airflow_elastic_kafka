@@ -13,6 +13,7 @@ from requests import Timeout
 from requests.exceptions import ChunkedEncodingError
 import pandas as pd
 from emotion import Emotion
+from topic.topic1 import InstagramTopicDetection
 from components.elastic import ElasticSearch
 from components.kafka import Kafka
 
@@ -109,6 +110,15 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
                 continue
             return json.loads(response.text)
 
+    @task(max_active_tis_per_dag=3)
+    def perform_subject_v1(batch):
+        topic1 = InstagramTopicDetection()
+        for text in batch:
+            try:
+                return topic1.infer(text, ner)
+            except Exception as e:
+                print('topic1 Error ========================>> ', e)
+                return None
 
     @task(max_active_tis_per_dag=3)
     def perform_emotion_v1(texts):
