@@ -8,7 +8,7 @@ from dotenv import dotenv_values
 
 
 
-class Emotions:
+class Emotion:
     def __init__(self,url , Token):
         self.url = url
         self.token = Token

@@ -1,8 +1,11 @@
 import os
 from dotenv import load_dotenv
+from config.config import Config
 
 # Load environment variables from .env file
 load_dotenv()
+
+config = Config()
 
 # Access the environment variables
 ES_HOST = os.getenv('ES_HOST')
@@ -24,3 +27,4 @@ EMOTION_TOKEN = os.getenv('EMOTION_TOKEN')
 FULL_TEXT_FIELD = os.getenv('FULL_TEXT_FIELD')
 NOT_EXISTS_FIELD = os.getenv('NOT_EXISTS_FIELD')
 ORDERABLE_PARAMETERS = os.getenv('ORDERABLE_PARAMETERS')
+
