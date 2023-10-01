@@ -1,4 +1,4 @@
-from dags.components.kafka import Kafka
+from components.kafka import Kafka
 
 
 class Test(Kafka):

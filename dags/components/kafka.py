@@ -16,6 +16,7 @@ class Kafka:
         bootstrap = config.get(self._connection_name, 'bootstrap')
         username = config.get(self._connection_name, 'username')
         password = config.get(self._connection_name, 'password')
+        print(bootstrap)
 
         self.producer = Producer({
             'bootstrap.servers': bootstrap,
@@ -26,4 +27,7 @@ class Kafka:
         })
 
     def insert_data(self, data):
+        print('insert data process', data)
+        print('insert data process', type(data))
         self.producer.produce(self._topic, value=json.dumps(data).encode('utf-8'))
+        print('inserted data')
