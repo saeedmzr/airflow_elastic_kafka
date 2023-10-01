@@ -219,7 +219,7 @@ with DAG(dag_id="add_emotion_tag_with_expand", default_args=default_args, schedu
             }
             kafka_client.insert_data(tmp_data)
             final_data.append(tmp_data)
-
+        kafka_client.producer.flush()
         return final_data
 
 
