@@ -1,19 +1,33 @@
-from confluent_kafka import Producer
 import json
+
+from confluent_kafka import Producer
+
+from setting import config
 
 
 class Kafka:
-    def __init__(self, BOOTSTRAP, TOPIC, USERNAME, PASSWORD):
+    __slots__ = (
+        "_connection_name",
+        "_topic",
+        "producer"
+    )
+
+    def __init__(self):
+        bootstrap = config.get(self._connection_name, 'bootstrap')
+        username = config.get(self._connection_name, 'username')
+        password = config.get(self._connection_name, 'password')
+        print(bootstrap)
+
         self.producer = Producer({
-            'bootstrap.servers': BOOTSTRAP,
+            'bootstrap.servers': bootstrap,
             'security.protocol': 'SASL_PLAINTEXT',
             'sasl.mechanism': 'PLAIN',
-            'sasl.username': USERNAME,
-            'sasl.password': PASSWORD
+            'sasl.username': username,
+            'sasl.password': password,
         })
-        self.kafka_topic = TOPIC
 
-    def insert_data(self, datas):
-        for data in datas:
-            self.producer.produce(self.kafka_topic, value=json.dumps(data).encode('utf-8'))
-        self.producer.flush()
+    def insert_data(self, data):
+        print('insert data process', data)
+        print('insert data process', type(data))
+        self.producer.produce(self._topic, value=json.dumps(data).encode('utf-8'))
+        print('inserted data')
